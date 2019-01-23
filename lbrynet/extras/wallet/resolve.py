@@ -320,7 +320,7 @@ def _verify_proof(name, claim_trie_root, result, height, depth, transaction_clas
     """
 
     def _build_response(name, value, claim_id, txid, n, amount, effective_amount,
-                        claim_sequence, claim_address, supports):
+                        claim_address, supports):
         r = {
             'name': name,
             'value': hexlify(value),
@@ -331,7 +331,6 @@ def _verify_proof(name, claim_trie_root, result, height, depth, transaction_clas
             'effective_amount': effective_amount,
             'height': height,
             'depth': depth,
-            'claim_sequence': claim_sequence,
             'address': claim_address,
             'supports': supports
         }
@@ -350,14 +349,13 @@ def _verify_proof(name, claim_trie_root, result, height, depth, transaction_clas
                         effective_amount = claim_output.amount + support_amount
                         claim_address = hash160_to_address(claim_output.script.values['pubkey_hash'])
                         claim_id = result['claim_id']
-                        claim_sequence = result['claim_sequence']
                         claim_script = claim_output.script
                         decoded_name = claim_script.values['claim_name'].decode()
                         decoded_value = claim_script.values['claim']
                         if decoded_name == name:
                             return _build_response(name, decoded_value, claim_id,
                                                    tx.id, nOut, claim_output.amount,
-                                                   effective_amount, claim_sequence,
+                                                   effective_amount,
                                                    claim_address, supports)
                         return {'error': 'name in proof did not match requested name'}
                     outputs = len(tx['outputs'])
@@ -486,6 +484,7 @@ def pick_winner_from_channel_path_collision(claims_in_channel):
             continue
         if winner is None:
             winner = claim
-        elif claim['claim_sequence'] < winner['claim_sequence']:
+        elif claim['height'] < winner['height'] or \
+                (claim['height'] == winner['height'] and claim['nout'] < winner['nout']):
             winner = claim
     return winner

@@ -503,7 +503,7 @@ class SQLiteStorage(SQLiteMixin):
                 amount = lbc_to_dewies(claim_info['amount'])
                 height = claim_info['height']
                 address = claim_info['address']
-                sequence = claim_info['claim_sequence']
+                sequence = claim_info['claim_sequence'] if 'claim_sequence' in claim_info else -1
                 try:
                     certificate_id = claim_info['value'].get('publisherSignature', {}).get('certificateId')
                 except AttributeError:
