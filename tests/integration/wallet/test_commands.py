@@ -1,6 +1,8 @@
+import asyncio
 import json
 import tempfile
 import logging
+import unittest
 from binascii import unhexlify
 
 from lbrynet.extras.wallet.transaction import Transaction
@@ -28,6 +30,10 @@ class CommandTestCase(IntegrationTestCase):
     timeout = 180
     MANAGER = LbryWalletManager
     VERBOSITY = logging.WARN
+    LEDGER = lbrynet.extras.wallet
+
+    async def asyncDaemonStart(self):
+        await self.daemon.initialize()
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
@@ -39,6 +45,7 @@ class CommandTestCase(IntegrationTestCase):
         conf.data_dir = self.wallet_node.data_path
         conf.wallet_dir = self.wallet_node.data_path
         conf.download_dir = self.wallet_node.data_path
+        print("WALLET_DIR =", self.wallet_node.data_path)
         conf.share_usage_data = False
         conf.use_upnp = False
         conf.reflect_streams = False
@@ -66,7 +73,8 @@ class CommandTestCase(IntegrationTestCase):
         self.daemon = Daemon(conf, ComponentManager(
             conf, skip_components=conf.components_to_skip, wallet=wallet_maker
         ))
-        await self.daemon.initialize()
+
+        await self.asyncDaemonStart()
         self.manager.old_db = self.daemon.storage
 
     async def asyncTearDown(self):
@@ -767,6 +775,39 @@ class ClaimManagement(CommandTestCase):
         self.assertEqual(txs2[0]['value'], '0.0')
         self.assertEqual(txs2[0]['fee'], '-0.0001415')
 
+    async def test_normalization_resolution(self):
+
+        # this test assumes that the lbrycrd forks normalization at height == 250 on regtest
+
+        c1 = await self.make_claim('ΣίσυφοςﬁÆ', '0.1')
+        c2 = await self.make_claim('ΣΊΣΥΦΟσFIæ', '0.2')
+
+        r1 = await self.daemon.jsonrpc_resolve(uri='lbry://ΣίσυφοςﬁÆ')
+        r2 = await self.daemon.jsonrpc_resolve(uri='lbry://ΣΊΣΥΦΟσFIæ')
+
+        r1c = list(r1.values())[0]['claim']['claim_id']
+        r2c = list(r2.values())[0]['claim']['claim_id']
+        self.assertEqual(c1['claim_id'], r1c)
+        self.assertEqual(c2['claim_id'], r2c)
+        self.assertNotEqual(r1c, r2c)
+
+        await self.generate(50)
+        head = await self.daemon.jsonrpc_block_show()
+        self.assertTrue(head['height'] > 250)
+
+        r3 = await self.daemon.jsonrpc_resolve(uri='lbry://ΣίσυφοςﬁÆ')
+        r4 = await self.daemon.jsonrpc_resolve(uri='lbry://ΣΊΣΥΦΟσFIæ')
+
+        r3c = list(r3.values())[0]['claim']['claim_id']
+        r4c = list(r4.values())[0]['claim']['claim_id']
+        r3n = list(r3.values())[0]['claim']['name']
+        r4n = list(r4.values())[0]['claim']['name']
+
+        self.assertEqual(c2['claim_id'], r3c)
+        self.assertEqual(c2['claim_id'], r4c)
+        self.assertEqual(r3c, r4c)
+        self.assertEqual(r3n, r4n)
+
 
 class TransactionCommandsTestCase(CommandTestCase):
 
@@ -803,3 +844,17 @@ class TransactionCommandsTestCase(CommandTestCase):
         await self.assertBalance(self.account, '0.0')
         await self.daemon.jsonrpc_utxo_release()
         await self.assertBalance(self.account, '11.0')
+
+
+# class RunFullStackForLiveTesting(CommandTestCase):
+#
+#     VERBOSITY = logging.INFO
+#
+#     async def asyncDaemonStart(self):
+#         await self.daemon.start()
+#
+#     async def test_full_stack(self):
+#         self.assertEqual('10.0', await self.daemon.jsonrpc_account_balance())
+#         print("Running: do your testing now.")
+#         while True:
+#             await asyncio.sleep(0.1)

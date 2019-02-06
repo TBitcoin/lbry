@@ -367,8 +367,14 @@ def _verify_proof(name, claim_trie_root, result, height, depth, transaction_clas
         return {'error': 'name is not claimed'}
 
     if 'proof' in result:
+        proof_name = name
+        if 'name' in result:
+            proof_name = result['name']
+            name = result['name']
+        if 'normalized_name' in result:
+            proof_name = result['normalized_name']
         try:
-            verify_proof(result['proof'], claim_trie_root, name)
+            verify_proof(result['proof'], claim_trie_root, proof_name)
         except InvalidProofError:
             return {'error': "Proof was invalid"}
         return _parse_proof_result(name, result)
@@ -419,7 +425,8 @@ def _decode_claim_result(claim):
         log.warning('Got an invalid claim while parsing, please report: %s', claim)
         claim['hex'] = None
         claim['value'] = None
-        claim['error'] = "Failed to parse: missing value"
+        backend_message = ' SDK message: ' + claim['error'] if 'error' in claim else ''
+        claim['error'] = "Failed to parse: missing value." + backend_message
         return claim
     try:
         decoded = smart_decode(claim['value'])

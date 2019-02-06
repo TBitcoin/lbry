@@ -212,7 +212,13 @@ class LBRYElectrumX(ElectrumX):
     def format_claim_from_daemon(self, claim, name=None):
         if not claim:
             return {}
-        name = claim['name'] if 'name' in claim else name
+
+        # this ISO-8859 nonsense stems from a nasty form of encoding extended characters in lbrycrd
+        # it will be fixed after the lbrycrd upstream merge to v17 is done
+        # it originated as a fear of terminals not supporting unicode. alas, they all do
+
+        if 'name' in claim:
+            name = claim['name'].encode('ISO-8859-1').decode()
         claim_id = claim['claimId']
         raw_claim_id = unhexlify(claim_id)[::-1]
         info = self.db.get_claim_info(raw_claim_id)
@@ -242,7 +248,7 @@ class LBRYElectrumX(ElectrumX):
             "valid_at_height": valid_at_height
         }
         if 'normalized_name' in claim:
-            result['normalized_name'] = claim['normalized_name']
+            result['normalized_name'] = claim['normalized_name'].encode('ISO-8859-1').decode()
         return result
 
     def format_supports_from_daemon(self, supports):
@@ -334,6 +340,7 @@ class LBRYElectrumX(ElectrumX):
                     result['unverified_claims_in_channel'] = {claim['claim_id']: (claim['name'], claim['height'])
                                                               for claim in claims_in_channel}
                 else:
+                    # making an assumption that there aren't case conflicts on an existing channel
                     norm_path = self.normalize_name(parsed_uri.path)
                     result['unverified_claims_for_name'] = {claim['claim_id']: (claim['name'], claim['height'])
                                                             for claim in claims_in_channel
