@@ -6,9 +6,8 @@ import sys
 
 import base58
 
-from lbryum import SimpleConfig, Network
+from lbryum.simple_config import SimpleConfig
 from lbryum.wallet import WalletStorage, Wallet
-from lbryum.commands import known_commands, Commands
 from lbryum import lbrycrd
 
 
