@@ -37,13 +37,13 @@ def ensureCliIsOnPathAndServerIsRunning():
     try:
         output = subprocess.check_output(['lbrycrd-cli', 'getinfo'])
     except OSError:
-        print 'Failed to run: lbrycrd-cli needs to be on the PATH'
+        print >> sys.stderr, 'Failed to run: lbrycrd-cli needs to be on the PATH'
         sys.exit(1)
     except subprocess.CalledProcessError:
-        print 'Failed to run: could not connect to the lbrycrd server.'
-        print 'Make sure it is running and able to be connected to.'
-        print 'One way to do this is to run:'
-        print '      lbrycrdd -server -printtoconsole'
+        print >> sys.stderr, 'Failed to run: could not connect to the lbrycrd server.'
+        print >> sys.stderr, 'Make sure it is running and able to be connected to.'
+        print >> sys.stderr, 'One way to do this is to run:'
+        print >> sys.stderr, '      lbrycrdd -server -printtoconsole'
         sys.exit(1)
 
 
@@ -72,7 +72,7 @@ def getWallet(path=None):
         path = config.get_wallet_path()
     storage = WalletStorage(path)
     if not storage.file_exists:
-        print "Failed to run: No wallet to migrate"
+        print >> sys.stderr, "Failed to run: No wallet to migrate"
         sys.exit(1)
     return Wallet(storage)
 
