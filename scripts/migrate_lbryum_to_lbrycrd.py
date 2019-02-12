@@ -14,19 +14,23 @@ from lbryum import lbrycrd
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--wallet', help='path to lbryum wallet')
+    parser.add_argument('--label', help='assign label to imported addresses')    
     args = parser.parse_args()
 
     ensureCliIsOnPathAndServerIsRunning()
 
     wallet = getWallet(args.wallet)
+    label = args.label;
+    if not label:
+	label = ""
     addresses = wallet.addresses(True)
     for addr in addresses[:-1]:
         printBalance(wallet, addr)
-        saveAddr(wallet, addr)
+        saveAddr(wallet, addr, label)
     # on the last one, rescan.  Don't rescan early for sake of efficiency
     addr = addresses[-1]
     printBalance(wallet, addr)
-    saveAddr(wallet, addr, "true")
+    saveAddr(wallet, addr, label, "true")
 
 
 def ensureCliIsOnPathAndServerIsRunning():
@@ -73,7 +77,7 @@ def getWallet(path=None):
     return Wallet(storage)
 
 
-def saveAddr(wallet, addr, rescan="false"):
+def saveAddr(wallet, addr, label = "", rescan="false"):
     keys = wallet.get_private_key(addr, None)
     assert len(keys) == 1, 'Address {} has {} keys.  Expected 1'.format(addr, len(keys))
     key = keys[0]
@@ -83,7 +87,7 @@ def saveAddr(wallet, addr, rescan="false"):
     is_compressed = lbrycrd.is_compressed(key)
     wif = pkeyToWif(pkey, is_compressed)
     subprocess.check_call(
-        ['lbrycrd-cli', 'importprivkey', wif, "", rescan])
+        ['lbrycrd-cli', 'importprivkey', wif, label, rescan])
     validateAddress(addr)
 
 
